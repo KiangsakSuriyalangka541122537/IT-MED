@@ -1,0 +1,14 @@
+@import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-kanit: "Kanit", sans-serif;
+  --color-ash-gray: #9D9D8C;
+  --color-eggshell: #ECE6D4;
+}
+
+body {
+  font-family: var(--font-kanit);
+  background-color: var(--color-eggshell);
+  color: #333;
+}
