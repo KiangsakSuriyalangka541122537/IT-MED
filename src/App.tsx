@@ -60,7 +60,9 @@ export default function App() {
     const matchedCompanyIds = new Set(matchedCompanies.map(c => c.id));
 
     const matchedDrugs = drugs.filter(d => 
-      d.name.toLowerCase().includes(term) || matchedCompanyIds.has(d.companyId)
+      d.name.toLowerCase().includes(term) || 
+      (d.tradeName && d.tradeName.toLowerCase().includes(term)) ||
+      matchedCompanyIds.has(d.companyId)
     );
 
     const matchedReps = reps.filter(r => 
@@ -222,7 +224,10 @@ export default function App() {
                           <div className="grid grid-cols-1 gap-2">
                             {res.drugs.map((d: Drug) => (
                               <div key={d.id} className="p-3 bg-eggshell/30 rounded-xl border border-transparent hover:border-ash-gray/20 transition-all">
-                                <p className="font-medium text-sm md:text-base text-gray-700">{d.name}</p>
+                                <div className="flex justify-between items-start">
+                                  <p className="font-medium text-sm md:text-base text-gray-700">{d.name}</p>
+                                  {d.tradeName && <span className="text-[10px] md:text-xs font-bold text-ash-gray bg-ash-gray/10 px-2 py-0.5 rounded-md">{d.tradeName}</span>}
+                                </div>
                                 {d.description && <p className="text-[10px] md:text-xs text-gray-500 mt-1">{d.description}</p>}
                               </div>
                             ))}
@@ -439,8 +444,11 @@ const CompanyCard: React.FC<CompanyCardProps> = ({ company, reps, drugs, onEdit,
                 <h4 className="text-[9px] md:text-[10px] font-bold uppercase tracking-widest text-ash-gray/60">รายการยา</h4>
                 <div className="space-y-2">
                   {drugs.map(d => (
-                    <div key={d.id} className="text-xs md:text-sm flex items-center gap-2 text-gray-600">
-                      <Pill size={12} className="text-ash-gray/40" /> {d.name}
+                    <div key={d.id} className="text-xs md:text-sm flex items-center justify-between gap-2 text-gray-600">
+                      <div className="flex items-center gap-2">
+                        <Pill size={12} className="text-ash-gray/40" /> {d.name}
+                      </div>
+                      {d.tradeName && <span className="text-[9px] font-bold text-ash-gray/60 italic">({d.tradeName})</span>}
                     </div>
                   ))}
                   {drugs.length === 0 && <p className="text-[10px] md:text-xs text-gray-400 italic">ไม่มีข้อมูลยา</p>}
@@ -564,13 +572,23 @@ const UnifiedForm: React.FC<UnifiedFormProps> = ({ company, initialReps, initial
               </button>
               <div className="grid gap-3">
                 <input 
-                  placeholder="ชื่อยา *" 
+                  placeholder="ชื่อสามัญทางยา *" 
                   required
                   className="w-full p-2 bg-white rounded-lg border border-gray-100 outline-none focus:border-ash-gray text-sm"
                   value={drug.name}
                   onChange={e => {
                     const newDrugs = [...drugs];
                     newDrugs[idx].name = e.target.value;
+                    setDrugs(newDrugs);
+                  }}
+                />
+                <input 
+                  placeholder="ชื่อการค้า (ยี่ห้อ)" 
+                  className="w-full p-2 bg-white rounded-lg border border-gray-100 outline-none focus:border-ash-gray text-sm"
+                  value={drug.tradeName || ''}
+                  onChange={e => {
+                    const newDrugs = [...drugs];
+                    newDrugs[idx].tradeName = e.target.value;
                     setDrugs(newDrugs);
                   }}
                 />

@@ -1,6 +1,7 @@
 export interface Drug {
   id: string;
   name: string;
+  tradeName?: string;
   companyId: string;
   repId?: string;
   description?: string;

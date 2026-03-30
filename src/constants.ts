@@ -6,9 +6,9 @@ export const INITIAL_COMPANIES: Company[] = [
 ];
 
 export const INITIAL_DRUGS: Drug[] = [
-  { id: 'd1', name: 'Paracetamol 500mg', companyId: 'c1', repId: 'r1', description: 'ยาแก้ปวดลดไข้' },
-  { id: 'd2', name: 'Amoxicillin 250mg', companyId: 'c1', repId: 'r1', description: 'ยาฆ่าเชื้อ' },
-  { id: 'd3', name: 'Aspirin', companyId: 'c2', repId: 'r2', description: 'ยาละลายลิ่มเลือด' },
+  { id: 'd1', name: 'Paracetamol 500mg', tradeName: 'Sara', companyId: 'c1', repId: 'r1', description: 'ยาแก้ปวดลดไข้' },
+  { id: 'd2', name: 'Amoxicillin 250mg', tradeName: 'Amoxil', companyId: 'c1', repId: 'r1', description: 'ยาฆ่าเชื้อ' },
+  { id: 'd3', name: 'Aspirin', tradeName: 'Bayer', companyId: 'c2', repId: 'r2', description: 'ยาละลายลิ่มเลือด' },
 ];
 
 export const INITIAL_REPS: Representative[] = [
