@@ -4,6 +4,7 @@ import { Search as SearchIcon, Plus, Edit2, Trash2, Building2, User, Pill, Phone
 import { Drug, Company, Representative, TabType } from './types';
 import { INITIAL_COMPANIES, INITIAL_DRUGS, INITIAL_REPS } from './constants';
 import { Modal } from './components/Modal';
+import { ConfirmModal } from './components/ConfirmModal';
 import { supabase } from './supabaseClient';
 
 export default function App() {
@@ -16,6 +17,10 @@ export default function App() {
   // Manage tab states
   const [manageView, setManageView] = useState<'list' | 'form'>('list');
   const [editingCompanyId, setEditingCompanyId] = useState<string | null>(null);
+
+  // Confirm Modal state
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [companyToDelete, setCompanyToDelete] = useState<string | null>(null);
 
   // Load data from Supabase
   useEffect(() => {
@@ -119,21 +124,28 @@ export default function App() {
     }
   };
 
-  const handleDeleteCompany = async (id: string) => {
-    if (confirm('คุณต้องการลบข้อมูลบริษัทนี้ใช่หรือไม่? ข้อมูลผู้แทนและยาที่เกี่ยวข้องจะถูกลบทั้งหมด')) {
-      try {
-        // Delete from Supabase (Cascade delete should be set in DB, but we'll do it manually for safety if not)
-        await supabase.from('IT-MED-companies').delete().eq('id', id);
-        await supabase.from('IT-MED-reps').delete().eq('companyId', id);
-        await supabase.from('IT-MED-drugs').delete().eq('companyId', id);
+  const handleDeleteCompany = (id: string) => {
+    setCompanyToDelete(id);
+    setIsConfirmModalOpen(true);
+  };
 
-        setCompanies(companies.filter(c => c.id !== id));
-        setDrugs(drugs.filter(d => d.companyId !== id));
-        setReps(reps.filter(r => r.companyId !== id));
-      } catch (error) {
-        console.error('Error deleting from Supabase:', error);
-        alert('เกิดข้อผิดพลาดในการลบข้อมูล');
-      }
+  const confirmDelete = async () => {
+    if (!companyToDelete) return;
+    
+    try {
+      // Delete from Supabase (Cascade delete should be set in DB, but we'll do it manually for safety if not)
+      await supabase.from('IT-MED-companies').delete().eq('id', companyToDelete);
+      await supabase.from('IT-MED-reps').delete().eq('companyId', companyToDelete);
+      await supabase.from('IT-MED-drugs').delete().eq('companyId', companyToDelete);
+
+      setCompanies(companies.filter(c => c.id !== companyToDelete));
+      setDrugs(drugs.filter(d => d.companyId !== companyToDelete));
+      setReps(reps.filter(r => r.companyId !== companyToDelete));
+    } catch (error) {
+      console.error('Error deleting from Supabase:', error);
+      alert('เกิดข้อผิดพลาดในการลบข้อมูล');
+    } finally {
+      setCompanyToDelete(null);
     }
   };
 
@@ -316,6 +328,15 @@ export default function App() {
           )}
         </AnimatePresence>
       </main>
+
+      {/* Confirmation Modal */}
+      <ConfirmModal
+        isOpen={isConfirmModalOpen}
+        onClose={() => setIsConfirmModalOpen(false)}
+        onConfirm={confirmDelete}
+        title="ยืนยันการลบข้อมูล"
+        message="คุณต้องการลบข้อมูลบริษัทนี้ใช่หรือไม่? ข้อมูลผู้แทนและยาที่เกี่ยวข้องทั้งหมดจะถูกลบออกอย่างถาวร"
+      />
 
       {/* Mobile Nav */}
       <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-ash-gray/10 px-4 py-3 pb-6 flex justify-around md:hidden rounded-t-[32px] shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
