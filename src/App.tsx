@@ -20,18 +20,33 @@ export default function App() {
   // Load data from Supabase
   useEffect(() => {
     const fetchData = async () => {
-      const { data: companiesData } = await supabase.from('IT-MED-companies').select('*');
-      const { data: drugsData } = await supabase.from('IT-MED-drugs').select('*');
-      const { data: repsData } = await supabase.from('IT-MED-reps').select('*');
+      if (!supabase) {
+        console.warn('Supabase client is not initialized. Using initial data.');
+        setCompanies(INITIAL_COMPANIES);
+        setDrugs(INITIAL_DRUGS);
+        setReps(INITIAL_REPS);
+        return;
+      }
 
-      if (companiesData && companiesData.length > 0) setCompanies(companiesData);
-      else setCompanies(INITIAL_COMPANIES);
+      try {
+        const { data: companiesData } = await supabase.from('IT-MED-companies').select('*');
+        const { data: drugsData } = await supabase.from('IT-MED-drugs').select('*');
+        const { data: repsData } = await supabase.from('IT-MED-reps').select('*');
 
-      if (drugsData && drugsData.length > 0) setDrugs(drugsData);
-      else setDrugs(INITIAL_DRUGS);
+        if (companiesData && companiesData.length > 0) setCompanies(companiesData);
+        else setCompanies(INITIAL_COMPANIES);
 
-      if (repsData && repsData.length > 0) setReps(repsData);
-      else setReps(INITIAL_REPS);
+        if (drugsData && drugsData.length > 0) setDrugs(drugsData);
+        else setDrugs(INITIAL_DRUGS);
+
+        if (repsData && repsData.length > 0) setReps(repsData);
+        else setReps(INITIAL_REPS);
+      } catch (error) {
+        console.error('Error fetching data from Supabase:', error);
+        setCompanies(INITIAL_COMPANIES);
+        setDrugs(INITIAL_DRUGS);
+        setReps(INITIAL_REPS);
+      }
     };
 
     fetchData();
@@ -74,49 +89,69 @@ export default function App() {
   }, [searchTerm, drugs, companies, reps]);
 
   const handleSaveCompany = async (companyData: Company, repsData: Representative[], drugsData: Drug[]) => {
-    // 1. Update Company in Supabase
-    if (editingCompanyId) {
-      await supabase.from('IT-MED-companies').update(companyData).eq('id', editingCompanyId);
-      setCompanies(companies.map(c => c.id === editingCompanyId ? companyData : c));
-    } else {
-      await supabase.from('IT-MED-companies').insert(companyData);
-      setCompanies([...companies, companyData]);
+    if (!supabase) {
+      alert('ไม่สามารถบันทึกข้อมูลได้ เนื่องจากยังไม่ได้ตั้งค่า Supabase ใน Vercel');
+      return;
     }
 
-    // 2. Update Reps in Supabase
-    // First, delete old reps for this company
-    await supabase.from('IT-MED-reps').delete().eq('companyId', companyData.id);
-    // Then insert new ones
-    if (repsData.length > 0) {
-      await supabase.from('IT-MED-reps').insert(repsData);
-    }
-    const otherReps = reps.filter(r => r.companyId !== companyData.id);
-    setReps([...otherReps, ...repsData]);
+    try {
+      // 1. Update Company in Supabase
+      if (editingCompanyId) {
+        await supabase.from('IT-MED-companies').update(companyData).eq('id', editingCompanyId);
+        setCompanies(companies.map(c => c.id === editingCompanyId ? companyData : c));
+      } else {
+        await supabase.from('IT-MED-companies').insert(companyData);
+        setCompanies([...companies, companyData]);
+      }
 
-    // 3. Update Drugs in Supabase
-    // First, delete old drugs for this company
-    await supabase.from('IT-MED-drugs').delete().eq('companyId', companyData.id);
-    // Then insert new ones
-    if (drugsData.length > 0) {
-      await supabase.from('IT-MED-drugs').insert(drugsData);
-    }
-    const otherDrugs = drugs.filter(d => d.companyId !== companyData.id);
-    setDrugs([...otherDrugs, ...drugsData]);
+      // 2. Update Reps in Supabase
+      // First, delete old reps for this company
+      await supabase.from('IT-MED-reps').delete().eq('companyId', companyData.id);
+      // Then insert new ones
+      if (repsData.length > 0) {
+        await supabase.from('IT-MED-reps').insert(repsData);
+      }
+      const otherReps = reps.filter(r => r.companyId !== companyData.id);
+      setReps([...otherReps, ...repsData]);
 
-    setManageView('list');
-    setEditingCompanyId(null);
+      // 3. Update Drugs in Supabase
+      // First, delete old drugs for this company
+      await supabase.from('IT-MED-drugs').delete().eq('companyId', companyData.id);
+      // Then insert new ones
+      if (drugsData.length > 0) {
+        await supabase.from('IT-MED-drugs').insert(drugsData);
+      }
+      const otherDrugs = drugs.filter(d => d.companyId !== companyData.id);
+      setDrugs([...otherDrugs, ...drugsData]);
+
+      setManageView('list');
+      setEditingCompanyId(null);
+    } catch (error) {
+      console.error('Error saving to Supabase:', error);
+      alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+    }
   };
 
   const handleDeleteCompany = async (id: string) => {
-    if (confirm('คุณต้องการลบข้อมูลบริษัทนี้ใช่หรือไม่? ข้อมูลผู้แทนและยาที่เกี่ยวข้องจะถูกลบทั้งหมด')) {
-      // Delete from Supabase (Cascade delete should be set in DB, but we'll do it manually for safety if not)
-      await supabase.from('IT-MED-companies').delete().eq('id', id);
-      await supabase.from('IT-MED-reps').delete().eq('companyId', id);
-      await supabase.from('IT-MED-drugs').delete().eq('companyId', id);
+    if (!supabase) {
+      alert('ไม่สามารถลบข้อมูลได้ เนื่องจากยังไม่ได้ตั้งค่า Supabase ใน Vercel');
+      return;
+    }
 
-      setCompanies(companies.filter(c => c.id !== id));
-      setDrugs(drugs.filter(d => d.companyId !== id));
-      setReps(reps.filter(r => r.companyId !== id));
+    if (confirm('คุณต้องการลบข้อมูลบริษัทนี้ใช่หรือไม่? ข้อมูลผู้แทนและยาที่เกี่ยวข้องจะถูกลบทั้งหมด')) {
+      try {
+        // Delete from Supabase (Cascade delete should be set in DB, but we'll do it manually for safety if not)
+        await supabase.from('IT-MED-companies').delete().eq('id', id);
+        await supabase.from('IT-MED-reps').delete().eq('companyId', id);
+        await supabase.from('IT-MED-drugs').delete().eq('companyId', id);
+
+        setCompanies(companies.filter(c => c.id !== id));
+        setDrugs(drugs.filter(d => d.companyId !== id));
+        setReps(reps.filter(r => r.companyId !== id));
+      } catch (error) {
+        console.error('Error deleting from Supabase:', error);
+        alert('เกิดข้อผิดพลาดในการลบข้อมูล');
+      }
     }
   };
 
