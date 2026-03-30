@@ -20,14 +20,6 @@ export default function App() {
   // Load data from Supabase
   useEffect(() => {
     const fetchData = async () => {
-      if (!supabase) {
-        console.warn('Supabase client is not initialized. Using initial data.');
-        setCompanies(INITIAL_COMPANIES);
-        setDrugs(INITIAL_DRUGS);
-        setReps(INITIAL_REPS);
-        return;
-      }
-
       try {
         const { data: companiesData } = await supabase.from('IT-MED-companies').select('*');
         const { data: drugsData } = await supabase.from('IT-MED-drugs').select('*');
@@ -89,11 +81,6 @@ export default function App() {
   }, [searchTerm, drugs, companies, reps]);
 
   const handleSaveCompany = async (companyData: Company, repsData: Representative[], drugsData: Drug[]) => {
-    if (!supabase) {
-      alert('ไม่สามารถบันทึกข้อมูลได้ เนื่องจากยังไม่ได้ตั้งค่า Supabase ใน Vercel');
-      return;
-    }
-
     try {
       // 1. Update Company in Supabase
       if (editingCompanyId) {
@@ -133,11 +120,6 @@ export default function App() {
   };
 
   const handleDeleteCompany = async (id: string) => {
-    if (!supabase) {
-      alert('ไม่สามารถลบข้อมูลได้ เนื่องจากยังไม่ได้ตั้งค่า Supabase ใน Vercel');
-      return;
-    }
-
     if (confirm('คุณต้องการลบข้อมูลบริษัทนี้ใช่หรือไม่? ข้อมูลผู้แทนและยาที่เกี่ยวข้องจะถูกลบทั้งหมด')) {
       try {
         // Delete from Supabase (Cascade delete should be set in DB, but we'll do it manually for safety if not)
