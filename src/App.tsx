@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Search as SearchIcon, Plus, Edit2, Trash2, Building2, User, Pill, Phone, MessageSquare, X, ChevronRight, ChevronDown, Settings2, LogIn, LogOut, ArrowLeft, FileUp } from 'lucide-react';
 import { Drug, Company, Representative, TabType } from './types';
-import { INITIAL_COMPANIES, INITIAL_DRUGS, INITIAL_REPS } from './constants';
 import { Modal } from './components/Modal';
 import { ConfirmModal } from './components/ConfirmModal';
 import { supabase } from './supabaseClient';
@@ -34,19 +33,11 @@ export default function App() {
         const { data: drugsData } = await supabase.from('IT-MED-drugs').select('*');
         const { data: repsData } = await supabase.from('IT-MED-reps').select('*');
 
-        if (companiesData && companiesData.length > 0) setCompanies(companiesData);
-        else setCompanies(INITIAL_COMPANIES);
-
-        if (drugsData && drugsData.length > 0) setDrugs(drugsData);
-        else setDrugs(INITIAL_DRUGS);
-
-        if (repsData && repsData.length > 0) setReps(repsData);
-        else setReps(INITIAL_REPS);
+        if (companiesData) setCompanies(companiesData);
+        if (drugsData) setDrugs(drugsData);
+        if (repsData) setReps(repsData);
       } catch (error) {
         console.error('Error fetching data from Supabase:', error);
-        setCompanies(INITIAL_COMPANIES);
-        setDrugs(INITIAL_DRUGS);
-        setReps(INITIAL_REPS);
       }
     };
 
