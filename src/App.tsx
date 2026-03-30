@@ -667,7 +667,7 @@ const UnifiedForm: React.FC<UnifiedFormProps> = ({ company, initialReps, initial
             <Plus size={14} /> เพิ่มผู้แทน
           </button>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3">
           {reps.map((rep, idx) => (
             <div key={rep.id} className="p-4 bg-gray-50 rounded-2xl border border-gray-100 relative group">
               <button type="button" onClick={() => removeRep(rep.id)} className="absolute -top-2 -right-2 p-1.5 bg-white shadow-sm border border-gray-100 rounded-full text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -703,7 +703,7 @@ const UnifiedForm: React.FC<UnifiedFormProps> = ({ company, initialReps, initial
             <Plus size={14} /> เพิ่มยา
           </button>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3">
           {drugs.map((drug, idx) => (
             <div key={drug.id} className="p-4 bg-gray-50 rounded-2xl border border-gray-100 relative group">
               <button type="button" onClick={() => removeDrug(drug.id)} className="absolute -top-2 -right-2 p-1.5 bg-white shadow-sm border border-gray-100 rounded-full text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
