@@ -217,6 +217,7 @@ export default function App() {
             const repName = (row['ผู้แทน'] || row['representative'] || row['rep'] || '').trim();
             const drugName = (row['ชื่อสามัญทางยา'] || row['drug_name'] || row['name'] || '').trim();
             const tradeName = (row['ชื่อการค้า'] || row['trade_name'] || row['brand'] || '').trim();
+            const searchCount = parseInt(row['search_count'] || row['views'] || '0') || 0;
 
             if (!companyName || !drugName) continue;
 
@@ -224,7 +225,11 @@ export default function App() {
             const companyKey = companyName.toLowerCase();
             let company = companyMap.get(companyKey);
             if (!company) {
-              company = { id: 'c_' + Date.now() + Math.random().toString(36).substr(2, 5), name: companyName };
+              company = { 
+                id: 'c_' + Date.now() + Math.random().toString(36).substr(2, 5), 
+                name: companyName,
+                search_count: searchCount
+              };
               companyMap.set(companyKey, company);
             }
 
