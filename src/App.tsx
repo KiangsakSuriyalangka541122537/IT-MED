@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Search as SearchIcon, Plus, Edit2, Trash2, Building2, User, Pill, Phone, MessageSquare, X, ChevronRight, ChevronDown, Settings2, LogIn, LogOut, ArrowLeft } from 'lucide-react';
+import { Search as SearchIcon, Plus, Edit2, Trash2, Building2, User, Pill, Phone, MessageSquare, X, ChevronRight, ChevronDown, Settings2, LogIn, LogOut, ArrowLeft, FileUp } from 'lucide-react';
 import { Drug, Company, Representative, TabType } from './types';
 import { INITIAL_COMPANIES, INITIAL_DRUGS, INITIAL_REPS } from './constants';
 import { Modal } from './components/Modal';
 import { ConfirmModal } from './components/ConfirmModal';
 import { supabase } from './supabaseClient';
+import Papa from 'papaparse';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabType>('search');
@@ -21,6 +22,9 @@ export default function App() {
   // Confirm Modal state
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [companyToDelete, setCompanyToDelete] = useState<string | null>(null);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isImporting, setIsImporting] = useState(false);
 
   // Load data from Supabase
   useEffect(() => {
@@ -151,6 +155,106 @@ export default function App() {
     }
   };
 
+  const handleImportCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsImporting(true);
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: async (results) => {
+        try {
+          const data = results.data as any[];
+          
+          // Maps to track unique entities by name
+          const companyMap = new Map<string, Company>();
+          const repMap = new Map<string, Representative>();
+          const newDrugs: Drug[] = [];
+
+          // Pre-populate with existing data to avoid duplicates
+          companies.forEach(c => companyMap.set(c.name.trim().toLowerCase(), c));
+          reps.forEach(r => {
+            const company = companies.find(c => c.id === r.companyId);
+            if (company) {
+              repMap.set(`${company.name.trim().toLowerCase()}|${r.name.trim().toLowerCase()}`, r);
+            }
+          });
+
+          for (const row of data) {
+            // Expected columns: บริษัท, ผู้แทน, ชื่อสามัญทางยา, ชื่อการค้า
+            const companyName = (row['บริษัท'] || row['company'] || '').trim();
+            const repName = (row['ผู้แทน'] || row['representative'] || row['rep'] || '').trim();
+            const drugName = (row['ชื่อสามัญทางยา'] || row['drug_name'] || row['name'] || '').trim();
+            const tradeName = (row['ชื่อการค้า'] || row['trade_name'] || row['brand'] || '').trim();
+
+            if (!companyName || !drugName) continue;
+
+            // 1. Handle Company
+            const companyKey = companyName.toLowerCase();
+            let company = companyMap.get(companyKey);
+            if (!company) {
+              company = { id: 'c_' + Date.now() + Math.random().toString(36).substr(2, 5), name: companyName };
+              companyMap.set(companyKey, company);
+            }
+
+            // 2. Handle Representative
+            let repId: string | undefined = undefined;
+            if (repName) {
+              const repKey = `${companyKey}|${repName.toLowerCase()}`;
+              let rep = repMap.get(repKey);
+              if (!rep) {
+                rep = { id: 'r_' + Date.now() + Math.random().toString(36).substr(2, 5), name: repName, companyId: company.id };
+                repMap.set(repKey, rep);
+              }
+              repId = rep.id;
+            }
+
+            // 3. Handle Drug
+            newDrugs.push({
+              id: 'd_' + Date.now() + Math.random().toString(36).substr(2, 5),
+              name: drugName,
+              tradeName: tradeName || undefined,
+              companyId: company.id,
+              repId: repId // Now correctly links to the representative found or created in this row
+            });
+          }
+
+          // Convert maps to arrays
+          const finalCompanies = Array.from(companyMap.values());
+          const finalReps = Array.from(repMap.values());
+          
+          // Filter out existing drugs (simple check by name + company)
+          const existingDrugKeys = new Set(drugs.map(d => `${d.companyId}|${d.name.toLowerCase()}`));
+          const uniqueNewDrugs = newDrugs.filter(d => !existingDrugKeys.has(`${d.companyId}|${d.name.toLowerCase()}`));
+          const finalDrugs = [...drugs, ...uniqueNewDrugs];
+
+          // Save to Supabase
+          // Note: In a real app, you'd use a transaction or batch insert.
+          // For simplicity, we'll insert the new ones.
+          const newCompanies = finalCompanies.filter(c => !companies.find(ec => ec.id === c.id));
+          const newReps = finalReps.filter(r => !reps.find(er => er.id === r.id));
+
+          if (newCompanies.length > 0) await supabase.from('IT-MED-companies').insert(newCompanies);
+          if (newReps.length > 0) await supabase.from('IT-MED-reps').insert(newReps);
+          if (uniqueNewDrugs.length > 0) await supabase.from('IT-MED-drugs').insert(uniqueNewDrugs);
+
+          setCompanies(finalCompanies);
+          setReps(finalReps);
+          setDrugs(finalDrugs);
+
+          alert(`นำเข้าข้อมูลสำเร็จ!\nเพิ่มบริษัทใหม่: ${newCompanies.length}\nเพิ่มผู้แทนใหม่: ${newReps.length}\nเพิ่มยาใหม่: ${uniqueNewDrugs.length}`);
+        } catch (error) {
+          console.error('Import error:', error);
+          alert('เกิดข้อผิดพลาดในการนำเข้าข้อมูล');
+        } finally {
+          setIsImporting(false);
+          if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+      }
+    });
+  };
+
 
 
   return (
@@ -222,15 +326,23 @@ export default function App() {
                             <Pill size={14} /> รายการยา
                           </h3>
                           <div className="grid grid-cols-1 gap-2">
-                            {res.drugs.map((d: Drug) => (
-                              <div key={d.id} className="p-3 bg-eggshell/30 rounded-xl border border-transparent hover:border-ash-gray/20 transition-all">
-                                <div className="flex justify-between items-start">
-                                  <p className="font-medium text-sm md:text-base text-gray-700">{d.name}</p>
-                                  {d.tradeName && <span className="text-[10px] md:text-xs font-bold text-ash-gray bg-ash-gray/10 px-2 py-0.5 rounded-md">{d.tradeName}</span>}
+                            {res.drugs.map((d: Drug) => {
+                              const rep = res.reps.find((r: Representative) => r.id === d.repId);
+                              return (
+                                <div key={d.id} className="p-3 bg-eggshell/30 rounded-xl border border-transparent hover:border-ash-gray/20 transition-all">
+                                  <div className="flex justify-between items-start">
+                                    <p className="font-medium text-sm md:text-base text-gray-700">{d.name}</p>
+                                    {d.tradeName && <span className="text-[10px] md:text-xs font-bold text-ash-gray bg-ash-gray/10 px-2 py-0.5 rounded-md">{d.tradeName}</span>}
+                                  </div>
+                                  {rep && (
+                                    <p className="text-[10px] md:text-xs text-ash-gray/60 mt-1 flex items-center gap-1">
+                                      <User size={10} /> ผู้แทน: {rep.name}
+                                    </p>
+                                  )}
+                                  {d.description && <p className="text-[10px] md:text-xs text-gray-500 mt-1">{d.description}</p>}
                                 </div>
-                                {d.description && <p className="text-[10px] md:text-xs text-gray-500 mt-1">{d.description}</p>}
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         </div>
 
@@ -277,13 +389,30 @@ export default function App() {
                       <span className="p-2 bg-ash-gray/10 rounded-xl text-ash-gray"><Settings2 /></span>
                       จัดการข้อมูล
                     </h2>
-                    <button
-                      onClick={() => { setEditingCompanyId(null); setManageView('form'); }}
-                      className="p-3 bg-ash-gray text-white rounded-2xl shadow-lg shadow-ash-gray/20 hover:scale-105 transition-transform flex items-center gap-2 px-4"
-                    >
-                      <Plus size={20} />
-                      <span className="hidden md:inline">เพิ่มบริษัทใหม่</span>
-                    </button>
+                    <div className="flex gap-2">
+                      <input 
+                        type="file" 
+                        ref={fileInputRef} 
+                        onChange={handleImportCSV} 
+                        accept=".csv" 
+                        className="hidden" 
+                      />
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isImporting}
+                        className="p-3 bg-white text-ash-gray border border-ash-gray/20 rounded-2xl shadow-sm hover:bg-gray-50 transition-all flex items-center gap-2 px-4 disabled:opacity-50"
+                      >
+                        <FileUp size={20} />
+                        <span className="hidden md:inline">{isImporting ? 'กำลังนำเข้า...' : 'นำเข้า CSV'}</span>
+                      </button>
+                      <button
+                        onClick={() => { setEditingCompanyId(null); setManageView('form'); }}
+                        className="p-3 bg-ash-gray text-white rounded-2xl shadow-lg shadow-ash-gray/20 hover:scale-105 transition-transform flex items-center gap-2 px-4"
+                      >
+                        <Plus size={20} />
+                        <span className="hidden md:inline">เพิ่มบริษัทใหม่</span>
+                      </button>
+                    </div>
                   </div>
 
                   <div className="grid gap-4">
@@ -443,14 +572,24 @@ const CompanyCard: React.FC<CompanyCardProps> = ({ company, reps, drugs, onEdit,
               <div className="space-y-3">
                 <h4 className="text-[9px] md:text-[10px] font-bold uppercase tracking-widest text-ash-gray/60">รายการยา</h4>
                 <div className="space-y-2">
-                  {drugs.map(d => (
-                    <div key={d.id} className="text-xs md:text-sm flex items-center justify-between gap-2 text-gray-600">
-                      <div className="flex items-center gap-2">
-                        <Pill size={12} className="text-ash-gray/40" /> {d.name}
+                  {drugs.map(d => {
+                    const rep = reps.find(r => r.id === d.repId);
+                    return (
+                      <div key={d.id} className="text-xs md:text-sm flex flex-col gap-1 p-2 bg-white/50 rounded-lg border border-ash-gray/5">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 font-medium text-gray-700">
+                            <Pill size={12} className="text-ash-gray/40" /> {d.name}
+                          </div>
+                          {d.tradeName && <span className="text-[9px] font-bold text-ash-gray/60 italic">({d.tradeName})</span>}
+                        </div>
+                        {rep && (
+                          <div className="flex items-center gap-1 text-[10px] text-ash-gray/70 pl-5">
+                            <User size={10} /> ผู้แทน: {rep.name}
+                          </div>
+                        )}
                       </div>
-                      {d.tradeName && <span className="text-[9px] font-bold text-ash-gray/60 italic">({d.tradeName})</span>}
-                    </div>
-                  ))}
+                    );
+                  })}
                   {drugs.length === 0 && <p className="text-[10px] md:text-xs text-gray-400 italic">ไม่มีข้อมูลยา</p>}
                 </div>
               </div>
@@ -592,6 +731,23 @@ const UnifiedForm: React.FC<UnifiedFormProps> = ({ company, initialReps, initial
                     setDrugs(newDrugs);
                   }}
                 />
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-ash-gray/60 ml-1">ผู้แทนที่ดูแลยานี้</label>
+                  <select
+                    className="w-full p-2 bg-white rounded-lg border border-gray-100 outline-none focus:border-ash-gray text-sm appearance-none cursor-pointer"
+                    value={drug.repId || ''}
+                    onChange={e => {
+                      const newDrugs = [...drugs];
+                      newDrugs[idx].repId = e.target.value || undefined;
+                      setDrugs(newDrugs);
+                    }}
+                  >
+                    <option value="">-- เลือกผู้แทน --</option>
+                    {reps.filter(r => r.name).map(r => (
+                      <option key={r.id} value={r.id}>{r.name}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
           ))}
