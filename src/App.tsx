@@ -123,40 +123,79 @@ export default function App() {
 
   const handleSaveCompany = async (companyData: Company, repsData: Representative[], drugsData: Drug[]) => {
     try {
+      // Clean data for Supabase (remove created_at if exists, handle nulls)
+      const cleanCompany = { ...companyData };
+      delete (cleanCompany as any).created_at;
+
+      const cleanReps = repsData.map(r => {
+        const nr = { ...r };
+        delete (nr as any).created_at;
+        return nr;
+      });
+
+      const cleanDrugs = drugsData.map(d => {
+        const nd = { ...d };
+        delete (nd as any).created_at;
+        // Ensure empty strings are null for optional fields
+        if (!nd.tradeName) delete nd.tradeName;
+        if (!nd.repId) delete nd.repId;
+        if (!nd.description) delete nd.description;
+        return nd;
+      });
+
       // 1. Update Company in Supabase
+      let coError;
       if (editingCompanyId) {
-        await supabase.from('IT-MED-companies').update(companyData).eq('id', editingCompanyId);
-        setCompanies(companies.map(c => c.id === editingCompanyId ? companyData : c));
+        const { error } = await supabase.from('IT-MED-companies').update(cleanCompany).eq('id', editingCompanyId);
+        coError = error;
       } else {
-        await supabase.from('IT-MED-companies').insert(companyData);
-        setCompanies([...companies, companyData]);
+        const { error } = await supabase.from('IT-MED-companies').insert(cleanCompany);
+        coError = error;
+      }
+      if (coError) throw coError;
+
+      // 2. Delete existing data (Delete Drugs first to avoid FK constraint issues with Reps)
+      const { error: delDrugError } = await supabase.from('IT-MED-drugs').delete().eq('companyId', companyData.id);
+      if (delDrugError) throw delDrugError;
+
+      const { error: delRepError } = await supabase.from('IT-MED-reps').delete().eq('companyId', companyData.id);
+      if (delRepError) throw delRepError;
+      
+      // 3. Insert new data
+      // Insert Reps first so Drugs can reference them if needed
+      if (cleanReps.length > 0) {
+        const { error: insRepError } = await supabase.from('IT-MED-reps').insert(cleanReps);
+        if (insRepError) throw insRepError;
       }
 
-      // 2. Update Reps in Supabase
-      // First, delete old reps for this company
-      await supabase.from('IT-MED-reps').delete().eq('companyId', companyData.id);
-      // Then insert new ones
-      if (repsData.length > 0) {
-        await supabase.from('IT-MED-reps').insert(repsData);
+      if (cleanDrugs.length > 0) {
+        const { error: insDrugError } = await supabase.from('IT-MED-drugs').insert(cleanDrugs);
+        if (insDrugError) throw insDrugError;
       }
-      const otherReps = reps.filter(r => r.companyId !== companyData.id);
-      setReps([...otherReps, ...repsData]);
 
-      // 3. Update Drugs in Supabase
-      // First, delete old drugs for this company
-      await supabase.from('IT-MED-drugs').delete().eq('companyId', companyData.id);
-      // Then insert new ones
-      if (drugsData.length > 0) {
-        await supabase.from('IT-MED-drugs').insert(drugsData);
-      }
-      const otherDrugs = drugs.filter(d => d.companyId !== companyData.id);
-      setDrugs([...otherDrugs, ...drugsData]);
+      // Update local state
+      setCompanies(prev => {
+        if (editingCompanyId) {
+          return prev.map(c => c.id === editingCompanyId ? companyData : c);
+        }
+        return [...prev, companyData];
+      });
+
+      setReps(prev => {
+        const otherReps = prev.filter(r => r.companyId !== companyData.id);
+        return [...otherReps, ...repsData];
+      });
+
+      setDrugs(prev => {
+        const otherDrugs = prev.filter(d => d.companyId !== companyData.id);
+        return [...otherDrugs, ...drugsData];
+      });
 
       setManageView('list');
       setEditingCompanyId(null);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving to Supabase:', error);
-      alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+      alert(`เกิดข้อผิดพลาดในการบันทึกข้อมูล: ${error.message || 'Unknown error'}`);
     }
   };
 
@@ -682,7 +721,18 @@ const UnifiedForm: React.FC<UnifiedFormProps> = ({ company, initialReps, initial
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!comp.name) return;
-    onSave(comp, reps.filter(r => r.name), drugs.filter(d => d.name));
+
+    const validReps = reps.filter(r => r.name.trim());
+    const validDrugs = drugs.filter(d => d.name.trim());
+
+    // Validation: Each drug must have a representative selected
+    const drugsWithoutRep = validDrugs.filter(d => !d.repId);
+    if (drugsWithoutRep.length > 0) {
+      alert(`กรุณาเลือกผู้แทนสำหรับยา: ${drugsWithoutRep.map(d => d.name).join(', ')}`);
+      return;
+    }
+
+    onSave(comp, validReps, validDrugs);
   };
 
   return (
@@ -782,6 +832,7 @@ const UnifiedForm: React.FC<UnifiedFormProps> = ({ company, initialReps, initial
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-ash-gray/60 ml-1">ผู้แทนที่ดูแลยานี้</label>
                   <select
+                    required
                     className="w-full p-2 bg-white rounded-lg border border-gray-100 outline-none focus:border-ash-gray text-sm appearance-none cursor-pointer"
                     value={drug.repId || ''}
                     onChange={e => {
