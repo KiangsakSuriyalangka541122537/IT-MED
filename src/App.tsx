@@ -57,7 +57,18 @@ export default function App() {
 
   // Search Logic
   const searchResults = useMemo(() => {
-    if (!searchTerm.trim()) return [];
+    if (!searchTerm.trim()) {
+      // Show top 5 most searched companies when no search term
+      return companies
+        .sort((a, b) => (b.search_count || 0) - (a.search_count || 0))
+        .slice(0, 5)
+        .map(company => ({
+          company,
+          drugs: drugs.filter(d => d.companyId === company.id),
+          reps: reps.filter(r => r.companyId === company.id),
+          isPopular: true
+        }));
+    }
     const term = searchTerm.toLowerCase();
 
     const matchedCompanies = companies.filter(c => c.name.toLowerCase().includes(term));
@@ -90,6 +101,25 @@ export default function App() {
 
     return results;
   }, [searchTerm, drugs, companies, reps]);
+
+  const handleIncrementSearchCount = async (companyId: string) => {
+    const company = companies.find(c => c.id === companyId);
+    if (!company) return;
+
+    const newCount = (company.search_count || 0) + 1;
+    
+    // Optimistic update
+    setCompanies(companies.map(c => c.id === companyId ? { ...c, search_count: newCount } : c));
+
+    try {
+      await supabase
+        .from('IT-MED-companies')
+        .update({ search_count: newCount })
+        .eq('id', companyId);
+    } catch (error) {
+      console.error('Error updating search count:', error);
+    }
+  };
 
   const handleSaveCompany = async (companyData: Company, repsData: Representative[], drugsData: Drug[]) => {
     try {
@@ -302,21 +332,34 @@ export default function App() {
               </div>
 
               <div className="space-y-4 md:space-y-6">
+                {!searchTerm.trim() && searchResults.length > 0 && (
+                  <div className="flex items-center gap-2 px-2 text-ash-gray/60">
+                    <Settings2 size={14} className="animate-pulse" />
+                    <span className="text-xs font-bold uppercase tracking-widest">รายการที่ค้นหาบ่อยที่สุด</span>
+                  </div>
+                )}
                 {searchResults.length > 0 ? (
                   searchResults.map((res: any) => (
                     <motion.div
                       layout
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="bg-white rounded-3xl p-4 md:p-6 shadow-sm border border-ash-gray/10"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="bg-white rounded-3xl p-4 md:p-6 shadow-sm border border-ash-gray/10 hover:border-ash-gray/30 transition-all cursor-pointer group"
                       key={res.company.id}
+                      onClick={() => handleIncrementSearchCount(res.company.id)}
                     >
-                      <div className="flex items-center gap-3 mb-4 md:mb-6 border-b border-gray-50 pb-4">
-                        <div className="p-2.5 md:p-3 bg-ash-gray/10 rounded-2xl text-ash-gray">
-                          <Building2 size={20} className="md:w-6 md:h-6" />
+                      <div className="flex items-center justify-between mb-4 md:mb-6 border-b border-gray-50 pb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2.5 md:p-3 bg-ash-gray/10 rounded-2xl text-ash-gray group-hover:bg-ash-gray group-hover:text-white transition-colors">
+                            <Building2 size={20} className="md:w-6 md:h-6" />
+                          </div>
+                          <div>
+                            <h2 className="text-lg md:text-xl font-bold text-gray-800">{res.company.name}</h2>
+                            {res.isPopular && <span className="text-[9px] font-bold text-ash-gray/50 uppercase tracking-tighter">ยอดนิยม</span>}
+                          </div>
                         </div>
-                        <div>
-                          <h2 className="text-lg md:text-xl font-bold text-gray-800">{res.company.name}</h2>
+                        <div className="text-ash-gray/20 group-hover:text-ash-gray/60 transition-colors">
+                          <ChevronRight size={20} />
                         </div>
                       </div>
 

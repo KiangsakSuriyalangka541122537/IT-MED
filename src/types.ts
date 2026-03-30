@@ -12,6 +12,7 @@ export interface Company {
   name: string;
   address?: string;
   phone?: string;
+  search_count?: number;
 }
 
 export interface Representative {
