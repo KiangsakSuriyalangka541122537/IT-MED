@@ -659,7 +659,7 @@ const CompanyCard: React.FC<CompanyCardProps> = ({ company, reps, drugs, onEdit,
           <button onClick={onEdit} className="p-2 text-ash-gray hover:bg-ash-gray/10 rounded-xl transition-colors">
             <Edit2 size={16} className="md:w-[18px] md:h-[18px]" />
           </button>
-          <button onClick={onDelete} className="p-2 text-red-400 hover:bg-red-50 rounded-xl transition-colors">
+          <button onClick={onDelete} className="p-2 text-ash-gray hover:bg-ash-gray/10 rounded-xl transition-colors">
             <Trash2 size={16} className="md:w-[18px] md:h-[18px]" />
           </button>
           <button onClick={() => setIsExpanded(!isExpanded)} className={`p-2 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}>
