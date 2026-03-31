@@ -534,6 +534,31 @@ export default function App() {
                     </div>
                   </div>
 
+                  {/* Summary Stats */}
+                  <div className="grid grid-cols-3 gap-3 md:gap-4">
+                    <div className="bg-white/60 backdrop-blur-sm rounded-[24px] p-3 md:p-4 border border-ash-gray/10 flex flex-col items-center justify-center text-center shadow-sm">
+                      <div className="flex items-center gap-1.5 mb-1 text-ash-gray/60">
+                        <Building2 size={14} />
+                        <span className="text-[10px] md:text-xs font-bold uppercase tracking-widest">บริษัท</span>
+                      </div>
+                      <span className="text-xl md:text-2xl font-bold text-ash-gray">{companies.length}</span>
+                    </div>
+                    <div className="bg-white/60 backdrop-blur-sm rounded-[24px] p-3 md:p-4 border border-ash-gray/10 flex flex-col items-center justify-center text-center shadow-sm">
+                      <div className="flex items-center gap-1.5 mb-1 text-ash-gray/60">
+                        <User size={14} />
+                        <span className="text-[10px] md:text-xs font-bold uppercase tracking-widest">ผู้แทน</span>
+                      </div>
+                      <span className="text-xl md:text-2xl font-bold text-ash-gray">{reps.length}</span>
+                    </div>
+                    <div className="bg-white/60 backdrop-blur-sm rounded-[24px] p-3 md:p-4 border border-ash-gray/10 flex flex-col items-center justify-center text-center shadow-sm">
+                      <div className="flex items-center gap-1.5 mb-1 text-ash-gray/60">
+                        <Pill size={14} />
+                        <span className="text-[10px] md:text-xs font-bold uppercase tracking-widest">ยา</span>
+                      </div>
+                      <span className="text-xl md:text-2xl font-bold text-ash-gray">{drugs.length}</span>
+                    </div>
+                  </div>
+
                   <div className="grid gap-4">
                     {companies.map((company) => (
                       <CompanyCard 
