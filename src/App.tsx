@@ -60,34 +60,67 @@ export default function App() {
           isPopular: true
         }));
     }
-    const term = searchTerm.toLowerCase();
-
-    const matchedCompanies = companies.filter(c => c.name.toLowerCase().includes(term));
-    const matchedCompanyIds = new Set(matchedCompanies.map(c => c.id));
-
-    const matchedDrugs = drugs.filter(d => 
-      d.name.toLowerCase().includes(term) || 
-      (d.tradeName && d.tradeName.toLowerCase().includes(term)) ||
-      matchedCompanyIds.has(d.companyId)
-    );
-
-    const matchedReps = reps.filter(r => 
-      r.name.toLowerCase().includes(term) || matchedCompanyIds.has(r.companyId)
-    );
-
     const results = companies.map(company => {
-      const companyDrugs = matchedDrugs.filter(d => d.companyId === company.id);
-      const companyReps = matchedReps.filter(r => r.companyId === company.id);
-      const isCompanyMatch = matchedCompanyIds.has(company.id);
+      const term = searchTerm.toLowerCase();
+      
+      // 1. Check if company name matches
+      const isCompanyMatch = company.name.toLowerCase().includes(term);
+      
+      // 2. Find reps that match the search term
+      const matchedRepsInCompany = reps.filter(r => 
+        r.companyId === company.id && r.name.toLowerCase().includes(term)
+      );
+      
+      // 3. Find drugs that match the search term (name or trade name)
+      const matchedDrugsInCompany = drugs.filter(d => 
+        d.companyId === company.id && (
+          d.name.toLowerCase().includes(term) || 
+          (d.tradeName && d.tradeName.toLowerCase().includes(term))
+        )
+      );
 
-      if (isCompanyMatch || companyDrugs.length > 0 || companyReps.length > 0) {
-        return {
-          company,
-          drugs: drugs.filter(d => d.companyId === company.id),
-          reps: reps.filter(r => r.companyId === company.id)
-        };
+      // If no match at all, skip
+      if (!isCompanyMatch && matchedRepsInCompany.length === 0 && matchedDrugsInCompany.length === 0) {
+        return null;
       }
-      return null;
+
+      let displayReps: Representative[] = [];
+      let displayDrugs: Drug[] = [];
+
+      if (isCompanyMatch && matchedRepsInCompany.length === 0 && matchedDrugsInCompany.length === 0) {
+        // Case A: ONLY company name matches -> Show everything
+        displayReps = reps.filter(r => r.companyId === company.id);
+        displayDrugs = drugs.filter(d => d.companyId === company.id);
+      } else {
+        // Case B: Rep or Drug matches (or both, or company also matches)
+        // We filter to show only relevant items
+        
+        // Start with matched reps
+        const repSet = new Set<string>(matchedRepsInCompany.map(r => r.id));
+        
+        // Start with matched drugs
+        const drugSet = new Set<string>(matchedDrugsInCompany.map(d => d.id));
+        
+        // Add drugs belonging to matched reps
+        drugs.filter(d => d.companyId === company.id && d.repId && repSet.has(d.repId))
+             .forEach(d => drugSet.add(d.id));
+             
+        // Add reps belonging to matched drugs
+        drugs.filter(d => d.companyId === company.id && drugSet.has(d.id) && d.repId)
+             .forEach(d => {
+               const rep = reps.find(r => r.id === d.repId);
+               if (rep) repSet.add(rep.id);
+             });
+
+        displayReps = reps.filter(r => repSet.has(r.id));
+        displayDrugs = drugs.filter(d => drugSet.has(d.id));
+      }
+
+      return {
+        company,
+        drugs: displayDrugs,
+        reps: displayReps
+      };
     }).filter(Boolean);
 
     return results;
