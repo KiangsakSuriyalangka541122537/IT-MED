@@ -359,10 +359,18 @@ export default function App() {
     <div className="min-h-screen bg-eggshell font-kanit pb-24 md:pb-0 md:pt-24">
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-40 bg-white/90 backdrop-blur-md border-b border-ash-gray/10 px-4 md:px-6 py-3 md:py-4 flex items-center justify-between shadow-sm">
-        <h1 className="text-lg md:text-xl font-bold text-ash-gray flex items-center gap-2">
+        <button 
+          onClick={() => {
+            setActiveTab('search');
+            setSearchTerm('');
+            setManageView('list');
+            setEditingCompanyId(null);
+          }}
+          className="text-lg md:text-xl font-bold text-ash-gray flex items-center gap-2 hover:opacity-80 transition-opacity outline-none"
+        >
           <Pill className="text-ash-gray w-5 h-5 md:w-6 md:h-6" />
           <span>ระบบค้นหาชื่อยา</span>
-        </h1>
+        </button>
         <div className="hidden md:flex gap-6 items-center">
           <NavItems activeTab={activeTab} setActiveTab={setActiveTab} />
         </div>
