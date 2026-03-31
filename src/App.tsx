@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Search as SearchIcon, Plus, Edit2, Trash2, Building2, User, Pill, Phone, MessageSquare, X, ChevronRight, ChevronDown, Settings2, LogIn, LogOut, ArrowLeft, FileUp } from 'lucide-react';
+import { Search as SearchIcon, Plus, Edit2, Trash2, Building2, User, Pill, Phone, MessageSquare, X, ChevronRight, ChevronDown, Settings2, LogIn, LogOut, ArrowLeft, FileUp, ArrowRightLeft } from 'lucide-react';
 import { Drug, Company, Representative, TabType } from './types';
 import { Modal } from './components/Modal';
 import { ConfirmModal } from './components/ConfirmModal';
@@ -26,6 +26,10 @@ export default function App() {
   const [isImporting, setIsImporting] = useState(false);
 
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
+
+  // Move Drug state
+  const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
+  const [drugToMove, setDrugToMove] = useState<Drug | null>(null);
 
   // Load data from Supabase
   useEffect(() => {
@@ -230,6 +234,24 @@ export default function App() {
     setIsConfirmModalOpen(true);
   };
 
+  const handleMoveDrug = async (drugId: string, targetCompanyId: string, targetRepId: string) => {
+    try {
+      const { error } = await supabase
+        .from('IT-MED-drugs')
+        .update({ companyId: targetCompanyId, repId: targetRepId })
+        .eq('id', drugId);
+
+      if (error) throw error;
+
+      setDrugs(drugs.map(d => d.id === drugId ? { ...d, companyId: targetCompanyId, repId: targetRepId } : d));
+      setIsMoveModalOpen(false);
+      setDrugToMove(null);
+    } catch (error) {
+      console.error('Error moving drug:', error);
+      alert('เกิดข้อผิดพลาดในการย้ายข้อมูลยา');
+    }
+  };
+
   const confirmDelete = async () => {
     if (!companyToDelete) return;
     
@@ -402,7 +424,7 @@ export default function App() {
                 <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-ash-gray/50 group-focus-within:text-ash-gray transition-colors" size={20} />
                 <input
                   type="text"
-                  placeholder="ค้นหาชื่อยา บริษัท หรือผู้แทน..."
+                  placeholder="ค้นหาชื่อยา ชื่อการค้า บริษัท หรือผู้แทน..."
                   className="w-full pl-12 pr-12 py-3.5 md:py-4 bg-white border border-gray-100 focus:border-ash-gray/30 rounded-2xl shadow-md outline-none transition-all text-base md:text-lg"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -585,6 +607,7 @@ export default function App() {
                         drugs={drugs.filter(d => d.companyId === company.id)}
                         onEdit={() => { setEditingCompanyId(company.id); setManageView('form'); }}
                         onDelete={() => handleDeleteCompany(company.id)}
+                        onMoveDrug={(drug) => { setDrugToMove(drug); setIsMoveModalOpen(true); }}
                       />
                     ))}
                     {companies.length === 0 && (
@@ -630,6 +653,16 @@ export default function App() {
         onClose={() => setIsHelpModalOpen(false)} 
       />
 
+      {/* Move Drug Modal */}
+      <MoveDrugModal
+        isOpen={isMoveModalOpen}
+        onClose={() => { setIsMoveModalOpen(false); setDrugToMove(null); }}
+        drug={drugToMove}
+        companies={companies}
+        reps={reps}
+        onMove={handleMoveDrug}
+      />
+
       {/* Confirmation Modal */}
       <ConfirmModal
         isOpen={isConfirmModalOpen}
@@ -653,6 +686,146 @@ interface HelpModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
+
+const MoveDrugModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  drug: Drug | null;
+  companies: Company[];
+  reps: Representative[];
+  onMove: (drugId: string, targetCompanyId: string, targetRepId: string) => void;
+}> = ({ isOpen, onClose, drug, companies, reps, onMove }) => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
+  const [selectedRepId, setSelectedRepId] = useState<string>('');
+
+  const filteredCompanies = useMemo(() => {
+    if (!searchTerm.trim()) return [];
+    return companies.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()));
+  }, [searchTerm, companies]);
+
+  const companyReps = useMemo(() => {
+    if (!selectedCompany) return [];
+    return reps.filter(r => r.companyId === selectedCompany.id);
+  }, [selectedCompany, reps]);
+
+  if (!isOpen || !drug) return null;
+
+  return (
+    <AnimatePresence>
+      <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={onClose}
+          className="absolute inset-0 bg-ash-gray/40 backdrop-blur-sm"
+        />
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: 20 }}
+          className="relative w-full max-w-md bg-white rounded-[40px] p-8 shadow-2xl border border-white/20"
+        >
+          <div className="flex justify-between items-center mb-6">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-ash-gray/10 rounded-2xl text-ash-gray">
+                <ArrowRightLeft size={24} />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-gray-800">ย้ายบริษัท</h2>
+                <p className="text-xs text-gray-500">ย้ายยา: {drug.name}</p>
+              </div>
+            </div>
+            <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+              <X size={24} className="text-gray-400" />
+            </button>
+          </div>
+
+          <div className="space-y-6">
+            {!selectedCompany ? (
+              <div className="space-y-4">
+                <div className="relative">
+                  <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                  <input
+                    autoFocus
+                    placeholder="ค้นหาบริษัทปลายทาง..."
+                    className="w-full pl-10 pr-4 py-3 bg-gray-50 rounded-2xl border border-gray-100 outline-none focus:border-ash-gray transition-all"
+                    value={searchTerm}
+                    onChange={e => setSearchTerm(e.target.value)}
+                  />
+                </div>
+                <div className="max-h-60 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
+                  {filteredCompanies.map(c => (
+                    <button
+                      key={c.id}
+                      onClick={() => setSelectedCompany(c)}
+                      className="w-full p-4 text-left bg-gray-50 hover:bg-ash-gray/5 rounded-2xl border border-gray-100 transition-all flex items-center justify-between group"
+                    >
+                      <span className="font-bold text-gray-700">{c.name}</span>
+                      <ChevronRight size={18} className="text-gray-300 group-hover:text-ash-gray transition-colors" />
+                    </button>
+                  ))}
+                  {searchTerm && filteredCompanies.length === 0 && (
+                    <p className="text-center py-4 text-sm text-gray-400 italic">ไม่พบข้อมูลบริษัท</p>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <div className="p-4 bg-ash-gray/5 rounded-2xl border border-ash-gray/10 flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] uppercase tracking-widest text-ash-gray/60 font-bold">บริษัทปลายทาง</p>
+                    <p className="font-bold text-gray-800">{selectedCompany.name}</p>
+                  </div>
+                  <button 
+                    onClick={() => { setSelectedCompany(null); setSelectedRepId(''); }}
+                    className="text-xs font-bold text-ash-gray hover:underline"
+                  >
+                    เปลี่ยน
+                  </button>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-gray-600 ml-1">เลือกผู้แทนที่ดูแลยานี้</label>
+                  <select
+                    className="w-full p-3 bg-gray-50 rounded-2xl border border-gray-100 outline-none focus:border-ash-gray transition-all text-sm appearance-none cursor-pointer"
+                    value={selectedRepId}
+                    onChange={e => setSelectedRepId(e.target.value)}
+                  >
+                    <option value="">-- เลือกผู้แทน --</option>
+                    {companyReps.map(r => (
+                      <option key={r.id} value={r.id}>{r.name}</option>
+                    ))}
+                  </select>
+                  {companyReps.length === 0 && (
+                    <p className="text-[10px] text-red-400 italic ml-1">บริษัทนี้ยังไม่มีข้อมูลผู้แทน กรุณาเพิ่มผู้แทนก่อนย้าย</p>
+                  )}
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => { setSelectedCompany(null); setSelectedRepId(''); }}
+                    className="flex-1 py-4 bg-gray-100 text-gray-600 rounded-2xl font-bold hover:bg-gray-200 transition-colors"
+                  >
+                    ย้อนกลับ
+                  </button>
+                  <button
+                    disabled={!selectedRepId}
+                    onClick={() => onMove(drug.id, selectedCompany.id, selectedRepId)}
+                    className="flex-1 py-4 bg-ash-gray text-white rounded-2xl font-bold shadow-lg shadow-ash-gray/20 hover:scale-[1.02] transition-transform disabled:opacity-50 disabled:hover:scale-100"
+                  >
+                    ยืนยันการย้าย
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </motion.div>
+      </div>
+    </AnimatePresence>
+  );
+};
 
 const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
   const steps = [
@@ -755,9 +928,10 @@ interface CompanyCardProps {
   drugs: Drug[];
   onEdit: () => void;
   onDelete: () => void;
+  onMoveDrug: (drug: Drug) => void;
 }
 
-const CompanyCard: React.FC<CompanyCardProps> = ({ company, reps, drugs, onEdit, onDelete }) => {
+const CompanyCard: React.FC<CompanyCardProps> = ({ company, reps, drugs, onEdit, onDelete, onMoveDrug }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
@@ -813,26 +987,33 @@ const CompanyCard: React.FC<CompanyCardProps> = ({ company, reps, drugs, onEdit,
               </div>
               <div className="space-y-3">
                 <h4 className="text-[9px] md:text-[10px] font-bold uppercase tracking-widest text-gray-600">รายการยา</h4>
-                <div className="space-y-2">
-                  {drugs.map(d => {
-                    const rep = reps.find(r => r.id === d.repId);
-                    return (
-                      <div key={d.id} className="text-xs md:text-sm flex flex-col gap-1 p-2 bg-white/50 rounded-lg border border-ash-gray/5">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2 font-medium text-gray-700">
-                            <Pill size={12} className="text-ash-gray/40" /> {d.name}
-                          </div>
+                        <div className="space-y-2">
+                          {drugs.map(d => {
+                            const rep = reps.find(r => r.id === d.repId);
+                            return (
+                              <div key={d.id} className="text-xs md:text-sm flex flex-col gap-1 p-2 bg-white/50 rounded-lg border border-ash-gray/5 group/drug relative">
+                                <div className="flex items-center justify-between gap-2">
+                                  <div className="flex items-center gap-2 font-medium text-gray-700">
+                                    <Pill size={12} className="text-ash-gray/40" /> {d.name}
+                                  </div>
+                                  <button 
+                                    onClick={() => onMoveDrug(d)}
+                                    className="p-1.5 text-ash-gray/40 hover:text-ash-gray hover:bg-ash-gray/10 rounded-lg transition-all opacity-0 group-hover/drug:opacity-100"
+                                    title="ย้ายบริษัท"
+                                  >
+                                    <ArrowRightLeft size={14} />
+                                  </button>
+                                </div>
+                                {d.tradeName && (
+                                  <div className="flex items-center gap-1 text-[10px] text-orange-600/80 pl-5 italic">
+                                    ชื่อการค้า: {d.tradeName}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                          {drugs.length === 0 && <p className="text-[10px] md:text-xs text-gray-400 italic">ไม่มีข้อมูลยา</p>}
                         </div>
-                        {d.tradeName && (
-                          <div className="flex items-center gap-1 text-[10px] text-orange-600/80 pl-5 italic">
-                            ชื่อการค้า: {d.tradeName}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                  {drugs.length === 0 && <p className="text-[10px] md:text-xs text-gray-400 italic">ไม่มีข้อมูลยา</p>}
-                </div>
               </div>
             </div>
           </motion.div>
