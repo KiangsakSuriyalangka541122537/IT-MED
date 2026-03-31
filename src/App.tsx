@@ -445,7 +445,7 @@ export default function App() {
                             <div className="flex items-center gap-2">
                               {res.isPopular && <span className="text-[9px] font-bold text-ash-gray/50 uppercase tracking-tighter">ยอดนิยม</span>}
                               {res.reps.length === 1 && (
-                                <span className="text-[10px] font-medium text-ash-gray/60 flex items-center gap-1">
+                                <span className="text-[10px] font-medium text-gray-500 flex items-center gap-1">
                                   <User size={10} /> {res.reps[0].name}
                                 </span>
                               )}
@@ -459,7 +459,7 @@ export default function App() {
 
                       <div className="grid md:grid-cols-2 gap-6 md:gap-8">
                         <div className="space-y-3 md:space-y-4">
-                          <h3 className="text-[10px] md:text-xs font-bold uppercase tracking-wider text-ash-gray/60 flex items-center gap-2">
+                          <h3 className="text-[10px] md:text-xs font-bold uppercase tracking-wider text-gray-600 flex items-center gap-2">
                             <Pill size={14} /> รายการยา
                           </h3>
                           <div className="grid grid-cols-1 gap-2">
@@ -471,7 +471,7 @@ export default function App() {
                                     <p className="font-medium text-sm md:text-base text-gray-700">{d.name}</p>
                                   </div>
                                   {d.tradeName && (
-                                    <p className="text-[10px] md:text-xs text-ash-gray/60 mt-1 flex items-center gap-1">
+                                    <p className="text-[10px] md:text-xs text-orange-600/80 mt-1 flex items-center gap-1">
                                       ชื่อการค้า: {d.tradeName}
                                     </p>
                                   )}
@@ -483,7 +483,7 @@ export default function App() {
                         </div>
 
                         <div className="space-y-3 md:space-y-4">
-                          <h3 className="text-[10px] md:text-xs font-bold uppercase tracking-wider text-ash-gray/60 flex items-center gap-2">
+                          <h3 className="text-[10px] md:text-xs font-bold uppercase tracking-wider text-gray-600 flex items-center gap-2">
                             <User size={14} /> ผู้แทนยา
                           </h3>
                           <div className="grid grid-cols-1 gap-2">
@@ -554,21 +554,21 @@ export default function App() {
                   {/* Summary Stats */}
                   <div className="grid grid-cols-3 gap-3 md:gap-4">
                     <div className="bg-white/60 backdrop-blur-sm rounded-[24px] p-3 md:p-4 border border-ash-gray/10 flex flex-col items-center justify-center text-center shadow-sm">
-                      <div className="flex items-center gap-1.5 mb-1 text-ash-gray/60">
+                      <div className="flex items-center gap-1.5 mb-1 text-gray-600">
                         <Building2 size={14} />
                         <span className="text-[10px] md:text-xs font-bold uppercase tracking-widest">บริษัท</span>
                       </div>
                       <span className="text-xl md:text-2xl font-bold text-ash-gray">{companies.length}</span>
                     </div>
                     <div className="bg-white/60 backdrop-blur-sm rounded-[24px] p-3 md:p-4 border border-ash-gray/10 flex flex-col items-center justify-center text-center shadow-sm">
-                      <div className="flex items-center gap-1.5 mb-1 text-ash-gray/60">
+                      <div className="flex items-center gap-1.5 mb-1 text-gray-600">
                         <User size={14} />
                         <span className="text-[10px] md:text-xs font-bold uppercase tracking-widest">ผู้แทน</span>
                       </div>
                       <span className="text-xl md:text-2xl font-bold text-ash-gray">{reps.length}</span>
                     </div>
                     <div className="bg-white/60 backdrop-blur-sm rounded-[24px] p-3 md:p-4 border border-ash-gray/10 flex flex-col items-center justify-center text-center shadow-sm">
-                      <div className="flex items-center gap-1.5 mb-1 text-ash-gray/60">
+                      <div className="flex items-center gap-1.5 mb-1 text-gray-600">
                         <Pill size={14} />
                         <span className="text-[10px] md:text-xs font-bold uppercase tracking-widest">ยา</span>
                       </div>
@@ -774,7 +774,7 @@ const CompanyCard: React.FC<CompanyCardProps> = ({ company, reps, drugs, onEdit,
         </div>
         <div className="flex items-center gap-1 md:gap-2">
           {reps.length === 1 && (
-            <div className="hidden md:flex items-center gap-1.5 px-3 py-1 bg-ash-gray/5 rounded-lg text-ash-gray/60 text-xs mr-2 border border-ash-gray/10">
+            <div className="hidden md:flex items-center gap-1.5 px-3 py-1 bg-ash-gray/5 rounded-lg text-gray-500 text-xs mr-2 border border-ash-gray/10">
               <User size={12} />
               <span className="font-medium">{reps[0].name}</span>
             </div>
@@ -801,7 +801,7 @@ const CompanyCard: React.FC<CompanyCardProps> = ({ company, reps, drugs, onEdit,
           >
             <div className="p-4 md:p-5 grid md:grid-cols-2 gap-4 md:gap-6">
               <div className="space-y-3">
-                <h4 className="text-[9px] md:text-[10px] font-bold uppercase tracking-widest text-ash-gray/60">ผู้แทนยา</h4>
+                <h4 className="text-[9px] md:text-[10px] font-bold uppercase tracking-widest text-gray-600">ผู้แทนยา</h4>
                 <div className="space-y-2">
                   {reps.map(r => (
                     <div key={r.id} className="text-xs md:text-sm flex items-center gap-2 text-gray-600">
@@ -812,7 +812,7 @@ const CompanyCard: React.FC<CompanyCardProps> = ({ company, reps, drugs, onEdit,
                 </div>
               </div>
               <div className="space-y-3">
-                <h4 className="text-[9px] md:text-[10px] font-bold uppercase tracking-widest text-ash-gray/60">รายการยา</h4>
+                <h4 className="text-[9px] md:text-[10px] font-bold uppercase tracking-widest text-gray-600">รายการยา</h4>
                 <div className="space-y-2">
                   {drugs.map(d => {
                     const rep = reps.find(r => r.id === d.repId);
@@ -824,7 +824,7 @@ const CompanyCard: React.FC<CompanyCardProps> = ({ company, reps, drugs, onEdit,
                           </div>
                         </div>
                         {d.tradeName && (
-                          <div className="flex items-center gap-1 text-[10px] text-ash-gray/70 pl-5 italic">
+                          <div className="flex items-center gap-1 text-[10px] text-orange-600/80 pl-5 italic">
                             ชื่อการค้า: {d.tradeName}
                           </div>
                         )}
