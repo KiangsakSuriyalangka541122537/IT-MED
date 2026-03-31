@@ -25,6 +25,8 @@ export default function App() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isImporting, setIsImporting] = useState(false);
 
+  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
+
   // Load data from Supabase
   useEffect(() => {
     const fetchData = async () => {
@@ -371,8 +373,17 @@ export default function App() {
           <Pill className="text-ash-gray w-5 h-5 md:w-6 md:h-6" />
           <span>ระบบค้นหาชื่อยา</span>
         </button>
-        <div className="hidden md:flex gap-6 items-center">
-          <NavItems activeTab={activeTab} setActiveTab={setActiveTab} />
+        <div className="flex gap-2 md:gap-4 items-center">
+          <button 
+            onClick={() => setIsHelpModalOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-ash-gray/5 hover:bg-ash-gray/10 rounded-xl text-ash-gray/60 text-xs font-bold transition-all border border-ash-gray/10"
+          >
+            <Settings2 size={14} />
+            <span>วิธีใช้งาน</span>
+          </button>
+          <div className="hidden md:flex gap-6 items-center">
+            <NavItems activeTab={activeTab} setActiveTab={setActiveTab} />
+          </div>
         </div>
       </header>
 
@@ -431,7 +442,14 @@ export default function App() {
                           </div>
                           <div>
                             <h2 className="text-lg md:text-xl font-bold text-gray-800">{res.company.name}</h2>
-                            {res.isPopular && <span className="text-[9px] font-bold text-ash-gray/50 uppercase tracking-tighter">ยอดนิยม</span>}
+                            <div className="flex items-center gap-2">
+                              {res.isPopular && <span className="text-[9px] font-bold text-ash-gray/50 uppercase tracking-tighter">ยอดนิยม</span>}
+                              {res.reps.length === 1 && (
+                                <span className="text-[10px] font-medium text-ash-gray/60 flex items-center gap-1">
+                                  <User size={10} /> {res.reps[0].name}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
                         <div className="text-ash-gray/20 group-hover:text-ash-gray/60 transition-colors">
@@ -451,11 +469,10 @@ export default function App() {
                                 <div key={d.id} className="p-3 bg-eggshell/30 rounded-xl border border-transparent hover:border-ash-gray/20 transition-all">
                                   <div className="flex justify-between items-start">
                                     <p className="font-medium text-sm md:text-base text-gray-700">{d.name}</p>
-                                    {d.tradeName && <span className="text-[10px] md:text-xs font-bold text-ash-gray bg-ash-gray/10 px-2 py-0.5 rounded-md">{d.tradeName}</span>}
                                   </div>
-                                  {rep && (
+                                  {d.tradeName && (
                                     <p className="text-[10px] md:text-xs text-ash-gray/60 mt-1 flex items-center gap-1">
-                                      <User size={10} /> ผู้แทน: {rep.name}
+                                      ชื่อการค้า: {d.tradeName}
                                     </p>
                                   )}
                                   {d.description && <p className="text-[10px] md:text-xs text-gray-500 mt-1">{d.description}</p>}
@@ -607,6 +624,12 @@ export default function App() {
         </AnimatePresence>
       </main>
 
+      {/* Help Modal */}
+      <HelpModal 
+        isOpen={isHelpModalOpen} 
+        onClose={() => setIsHelpModalOpen(false)} 
+      />
+
       {/* Confirmation Modal */}
       <ConfirmModal
         isOpen={isConfirmModalOpen}
@@ -625,6 +648,75 @@ export default function App() {
 }
 
 
+
+interface HelpModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
+  const steps = [
+    { title: 'ค้นหาข้อมูล', desc: 'พิมพ์ชื่อยา บริษัท หรือชื่อผู้แทนในช่องค้นหา ระบบจะแสดงผลลัพธ์ที่เกี่ยวข้องทันที' },
+    { title: 'ดูรายละเอียด', desc: 'กดที่ชื่อบริษัทเพื่อดูรายชื่อผู้แทนและรายการยาทั้งหมดของบริษัทนั้น' },
+    { title: 'จัดการข้อมูล', desc: 'ใช้เมนู "จัดการข้อมูล" เพื่อเพิ่ม แก้ไข หรือนำเข้าไฟล์ CSV เพื่ออัปเดตฐานข้อมูล' },
+    { title: 'กลับหน้าหลัก', desc: 'กดที่โลโก้ "ระบบค้นหาชื่อยา" เพื่อล้างการค้นหาและกลับสู่หน้าเริ่มต้น' }
+  ];
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="absolute inset-0 bg-ash-gray/40 backdrop-blur-sm"
+          />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            className="relative w-full max-w-md bg-white rounded-[40px] p-8 shadow-2xl border border-white/20"
+          >
+            <div className="flex justify-between items-center mb-8">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-ash-gray/10 rounded-2xl text-ash-gray">
+                  <Settings2 size={24} />
+                </div>
+                <h2 className="text-2xl font-bold text-gray-800">วิธีใช้งาน</h2>
+              </div>
+              <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                <X size={24} className="text-gray-400" />
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              {steps.map((step, idx) => (
+                <div key={idx} className="flex gap-4">
+                  <div className="flex-shrink-0 w-8 h-8 bg-ash-gray text-white rounded-full flex items-center justify-center font-bold text-sm">
+                    {idx + 1}
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-gray-800 mb-1">{step.title}</h4>
+                    <p className="text-sm text-gray-500 leading-relaxed">{step.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={onClose}
+              className="w-full mt-10 py-4 bg-ash-gray text-white rounded-2xl font-bold shadow-lg shadow-ash-gray/20 hover:scale-[1.02] transition-transform"
+            >
+              เข้าใจแล้ว
+            </button>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
+  );
+};
 
 interface NavItemsProps {
   activeTab: TabType;
@@ -681,6 +773,12 @@ const CompanyCard: React.FC<CompanyCardProps> = ({ company, reps, drugs, onEdit,
           </div>
         </div>
         <div className="flex items-center gap-1 md:gap-2">
+          {reps.length === 1 && (
+            <div className="hidden md:flex items-center gap-1.5 px-3 py-1 bg-ash-gray/5 rounded-lg text-ash-gray/60 text-xs mr-2 border border-ash-gray/10">
+              <User size={12} />
+              <span className="font-medium">{reps[0].name}</span>
+            </div>
+          )}
           <button onClick={onEdit} className="p-2 text-ash-gray hover:bg-ash-gray/10 rounded-xl transition-colors">
             <Edit2 size={16} className="md:w-[18px] md:h-[18px]" />
           </button>
@@ -724,11 +822,10 @@ const CompanyCard: React.FC<CompanyCardProps> = ({ company, reps, drugs, onEdit,
                           <div className="flex items-center gap-2 font-medium text-gray-700">
                             <Pill size={12} className="text-ash-gray/40" /> {d.name}
                           </div>
-                          {d.tradeName && <span className="text-[9px] font-bold text-ash-gray/60 italic">({d.tradeName})</span>}
                         </div>
-                        {rep && (
-                          <div className="flex items-center gap-1 text-[10px] text-ash-gray/70 pl-5">
-                            <User size={10} /> ผู้แทน: {rep.name}
+                        {d.tradeName && (
+                          <div className="flex items-center gap-1 text-[10px] text-ash-gray/70 pl-5 italic">
+                            ชื่อการค้า: {d.tradeName}
                           </div>
                         )}
                       </div>
