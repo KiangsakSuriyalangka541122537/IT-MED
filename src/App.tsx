@@ -636,6 +636,7 @@ export default function App() {
                       company={companies.find(c => c.id === editingCompanyId)}
                       initialReps={reps.filter(r => r.companyId === editingCompanyId)}
                       initialDrugs={drugs.filter(d => d.companyId === editingCompanyId)}
+                      allDrugs={drugs}
                       onSave={handleSaveCompany}
                       onCancel={() => setManageView('list')}
                     />
@@ -1027,14 +1028,18 @@ interface UnifiedFormProps {
   company?: Company;
   initialReps: Representative[];
   initialDrugs: Drug[];
+  allDrugs: Drug[];
   onSave: (c: Company, r: Representative[], d: Drug[]) => void;
   onCancel: () => void;
 }
 
-const UnifiedForm: React.FC<UnifiedFormProps> = ({ company, initialReps, initialDrugs, onSave, onCancel }) => {
+const UnifiedForm: React.FC<UnifiedFormProps> = ({ company, initialReps, initialDrugs, allDrugs, onSave, onCancel }) => {
   const [comp, setComp] = useState<Company>(company || { id: Date.now().toString(), name: '', phone: '', address: '' });
   const [reps, setReps] = useState<Representative[]>(initialReps.length > 0 ? initialReps : []);
   const [drugs, setDrugs] = useState<Drug[]>(initialDrugs.length > 0 ? initialDrugs : []);
+
+  const uniqueDrugNames = useMemo(() => Array.from(new Set(allDrugs.map(d => d.name).filter(Boolean))), [allDrugs]);
+  const uniqueTradeNames = useMemo(() => Array.from(new Set(allDrugs.map(d => d.tradeName).filter(Boolean))), [allDrugs]);
 
   const addRep = () => {
     setReps([...reps, { id: Date.now().toString() + Math.random(), name: '', companyId: comp.id, phone: '', lineId: '' }]);
@@ -1127,6 +1132,12 @@ const UnifiedForm: React.FC<UnifiedFormProps> = ({ company, initialReps, initial
 
       {/* Drugs Section */}
       <div className="space-y-4">
+        <datalist id="drug-names-list">
+          {uniqueDrugNames.map((name, i) => <option key={i} value={name} />)}
+        </datalist>
+        <datalist id="trade-names-list">
+          {uniqueTradeNames.map((name, i) => <option key={i} value={name} />)}
+        </datalist>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-ash-gray">
             <Pill size={18} />
@@ -1144,6 +1155,7 @@ const UnifiedForm: React.FC<UnifiedFormProps> = ({ company, initialReps, initial
               </button>
               <div className="grid gap-3">
                 <input 
+                  list="drug-names-list"
                   placeholder="ชื่อสามัญทางยา *" 
                   required
                   className="w-full p-2 bg-white rounded-lg border border-gray-100 outline-none focus:border-ash-gray text-sm"
@@ -1155,6 +1167,7 @@ const UnifiedForm: React.FC<UnifiedFormProps> = ({ company, initialReps, initial
                   }}
                 />
                 <input 
+                  list="trade-names-list"
                   placeholder="ชื่อการค้า (ยี่ห้อ)" 
                   className="w-full p-2 bg-white rounded-lg border border-gray-100 outline-none focus:border-ash-gray text-sm"
                   value={drug.tradeName || ''}
