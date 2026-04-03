@@ -151,6 +151,10 @@ export default function App() {
     }
   };
 
+  const sortedCompanies = useMemo(() => {
+    return [...companies].sort((a, b) => a.name.localeCompare(b.name, 'th'));
+  }, [companies]);
+
   const handleSaveCompany = async (companyData: Company, repsData: Representative[], drugsData: Drug[]) => {
     try {
       // Clean data for Supabase (remove created_at if exists, handle nulls)
@@ -599,7 +603,7 @@ export default function App() {
                   </div>
 
                   <div className="grid gap-4">
-                    {companies.map((company) => (
+                    {sortedCompanies.map((company) => (
                       <CompanyCard 
                         key={company.id} 
                         company={company} 
@@ -610,7 +614,7 @@ export default function App() {
                         onMoveDrug={(drug) => { setDrugToMove(drug); setIsMoveModalOpen(true); }}
                       />
                     ))}
-                    {companies.length === 0 && (
+                    {sortedCompanies.length === 0 && (
                       <div className="text-center py-20 text-gray-400 bg-white/50 rounded-3xl border-2 border-dashed border-gray-200">
                         ไม่มีข้อมูลบริษัท
                       </div>
